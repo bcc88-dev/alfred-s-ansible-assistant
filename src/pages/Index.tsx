@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Inventory, Host, QuickAction } from "@/lib/alfred-types";
 import { allHosts, loadInventory, saveInventory } from "@/lib/inventory-store";
 import { loadSettings, saveSettings, Settings } from "@/lib/alfred-settings";
-import { runOnRelay, runSimulated, RelayClient, RelayEvent } from "@/lib/relay-client";
+import { runOnRelay, RelayClient, RelayEvent } from "@/lib/relay-client";
 import { ParsedSuggestion } from "@/lib/alfred-ai";
 import { InventoryPanel } from "@/components/alfred/InventoryPanel";
 import { ActionsPanel } from "@/components/alfred/ActionsPanel";
@@ -81,31 +81,25 @@ const Index = () => {
       else if (e.type === "error") { writeTerm(`\r\n\x1b[31m✗ ${e.message}\x1b[0m\r\n`); toast.error(e.message); }
     };
 
-    if (relayUp) {
-      activeRunRef.current = runOnRelay(
-        settings,
-        { ...payload, hosts: selectedHosts.length ? selectedHosts : allHosts(inventory).slice(0, 1), inventoryPath: inventory.path },
-        onEvent,
-      );
-    } else {
-      writeTerm(`\x1b[90m(no relay at ${settings.relayUrl} — simulated output)\x1b[0m\r\n`);
-      activeRunRef.current = runSimulated(
-        { ...payload, hosts: selectedHosts.length ? selectedHosts : allHosts(inventory).slice(0, 1) },
-        onEvent,
-      );
+    if (!relayUp) {
+      const msg = `Relay offline at ${settings.relayUrl}. Run alfred-relay.py on your control node, sir.`;
+      writeTerm(`\r\n\x1b[31m✗ ${msg}\x1b[0m\r\n`);
+      toast.error(msg);
+      return;
     }
+    activeRunRef.current = runOnRelay(
+      settings,
+      { ...payload, hosts: selectedHosts.length ? selectedHosts : allHosts(inventory).slice(0, 1), inventoryPath: inventory.path },
+      onEvent,
+    );
   };
 
   const onProbe = () => {
-    dispatch({ kind: "ping", data: "ping" }, `ICMP probe — ${(selectedHosts.length || allHosts(inventory).length)} host(s)`);
-    // optimistic status update
-    const next = { ...inventory, hosts: { ...inventory.hosts } };
-    for (const h of Object.values(next.hosts)) {
-      const sel = selected.size === 0 || selected.has(h.id);
-      if (!sel) continue;
-      next.hosts[h.id] = { ...h, status: h.connection === "local" ? "up" : (Math.random() > 0.25 ? "up" : "down"), lastChecked: Date.now() };
+    if (!relayUp) {
+      toast.error(`Relay offline at ${settings.relayUrl}. Cannot probe hosts.`);
+      return;
     }
-    setInventory(next);
+    dispatch({ kind: "ping", data: "ping" }, `ICMP probe — ${(selectedHosts.length || allHosts(inventory).length)} host(s)`);
   };
 
   const onQuickAction = (a: QuickAction) => {
