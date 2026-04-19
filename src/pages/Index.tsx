@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Inventory, Host, QuickAction } from "@/lib/alfred-types";
 import { allHosts, loadInventory, saveInventory } from "@/lib/inventory-store";
 import { loadSettings, saveSettings, Settings } from "@/lib/alfred-settings";
-import { runOnRelay, runSimulated, RelayClient, RelayEvent } from "@/lib/relay-client";
+import { runOnRelay, RelayClient, RelayEvent } from "@/lib/relay-client";
 import { ParsedSuggestion } from "@/lib/alfred-ai";
 import { InventoryPanel } from "@/components/alfred/InventoryPanel";
 import { ActionsPanel } from "@/components/alfred/ActionsPanel";
